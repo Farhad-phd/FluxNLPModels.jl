@@ -65,6 +65,10 @@ device = cpu
   grad_x1_2 = similar(x1)
   obj_x1_2, grad_x1_2 = NLPModels.objgrad!(DNNLPModel, x1, grad_x1_2)
 
+  # Allocate for Hessian
+  hess_x1 = zeros(typeof(x1[1]), length(x1), length(x1))
+  hess_x1 = NLPModels.hess!(DNNLPModel, x1, hess_x1)
+
   @test DNNLPModel.w == old_w
   @test obj_x1 == obj_x1_2
   @test norm(grad_x1 - grad_x1_2) ≈ 0.0
@@ -73,6 +77,11 @@ device = cpu
   @test Flux.params(DNNLPModel.chain)[1][1] == x1[1]
   @test Flux.params(DNNLPModel.chain)[1][2] == x1[2]
 
+  # Hessian checks (basic validity)
+  @test size(hess_x1) == (length(x1), length(x1))
+  @test isapprox(norm(hess_x1), 0.0, atol=1e-6) == false  # Ensuring Hessian is not zero; this test might need adjustment depending upon your model/loss
+
+    
   @test_throws Exception FluxNLPModel(DN, [], test_data) # if the train data is empty
   @test_throws Exception FluxNLPModel(DN, train_data, []) # if the test data is empty
   @test_throws Exception FluxNLPModel(DN, [], []) # if the both data is empty

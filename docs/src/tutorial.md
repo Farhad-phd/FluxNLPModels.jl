@@ -123,6 +123,16 @@ g = similar(w)
 NLPModels.grad!(nlp, w, g)
 ```
 
+# Allocate a matrix to hold the Hessian
+```@example FluxNLPModels
+h = zeros(typeof(w[1]), length(w), length(w))
+```
+# Compute the Hessian matrix at w
+```@example FluxNLPModels
+NLPModels.hess!(nlp, w, h)
+```
+Note that `h` now contains the Hessian matrix, which represents the second derivatives of the objective function with respect to the model parameters
+
 ## Train a neural network with JSOSolvers.R2
 
 ```@example FluxNLPModel

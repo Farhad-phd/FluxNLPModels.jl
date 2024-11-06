@@ -1,3 +1,4 @@
+using Zygote
 """
     f = obj(nlp, w)
 
@@ -96,4 +97,47 @@ function NLPModels.objgrad!(
   g .= gradient(w_g -> local_loss(nlp, x, y, w_g), w)[1]
 
   return f_w, g
+end
+
+
+
+"""
+    h = hess!(nlp, w, h)
+
+Evaluate `∇²f(w)`, the Hessian of the objective function at `w` in place.
+
+# Arguments
+- `nlp::AbstractFluxNLPModel{T, S}`: the FluxNLPModel data struct;
+- `w::AbstractVector{V}`: is the vector of weights/variables. The use of `V` allows for flexibility in specifying different precision types for weights and models.
+- `h::AbstractMatrix{V}`: the Hessian matrix.
+
+# Output
+- `h`: the Hessian at point `w`.
+
+"""
+function NLPModels.hess!(
+  nlp::AbstractFluxNLPModel{T, S},
+  w::AbstractVector{V},
+  h::AbstractMatrix{U},
+) where {T, S, V, U}
+  @lencheck nlp.meta.nvar w h
+  x, y = nlp.current_training_minibatch
+
+  if (eltype(nlp.w) != V)  # we check if the types are the same
+    update_type!(nlp, w)
+    h = V.(h)
+    if eltype(x) != V
+      x = V.(x)
+    end
+  end
+
+  increment!(nlp, :neval_hess)
+  
+  # Calculate the Hessian using Zygote
+  loss_function = w_g -> local_loss(nlp, x, y, w_g)
+  hessian_func = Zygote.hessian(loss_function, w)
+  
+  h .= hessian_func  # assuming hessian_func directly returns a matrix
+
+  return h
 end
